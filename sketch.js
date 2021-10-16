@@ -46,7 +46,7 @@ function setup() {
     textFont(font, 16)
 
     // cam = new Dw.EasyCam(p5.RendererGL, {distance: 500, center: [0, 0, 0]})
-    cam = new Dw.EasyCam(this._renderer, {distance:240})
+    cam = new Dw.EasyCam(this._renderer, {distance:240});
 
     // TODO find out how to place slider properly
     // total = createSlider(1, 80, 20, 2)
@@ -76,6 +76,11 @@ function drawBlenderAxes() {
     line(0, 0, 0, 0, 0, ENDPOINT)
 }
 
+
+
+let telescope = []
+let telescope_index = 1
+let quad_index = 1
 
 // TODO why does alpha not work in WEBGL
 function draw() {
@@ -138,6 +143,18 @@ function draw() {
             y = r*sin(φ)*sin(θ)
             z = r*cos(φ)
 
+            // I actually need 4 variables here to hold each vertex of the quad
+            // let tmp_r = r
+            // if (i === 1 && j === 1) {
+            //     for (let n=0; n<10; n++) {
+            //         tmp_r *= 1.1
+            //         telescope.push(new p5.Vector(
+            //             tmp_r*sin(φ)*cos(θ),
+            //             tmp_r*sin(φ)*sin(θ),
+            //             tmp_r*cos(φ)))
+            //     }
+            // }
+
             globe[i][j] = new p5.Vector(x, y, z)
         }
     }
@@ -165,16 +182,27 @@ function draw() {
     endShape()
 
     // pyramid with lines https://editor.p5js.org/kchung/sketches/B17wokMUX
-    //     beginShape()
-    //     strokeWeight(1)
-    //     let i = 5
-    //     let pyramid = [globe[i][i], globe[i+1][i], globe[i+1][i+1], globe[i][i+1], globe[i][i]]
-    //     for (let v of pyramid) {
-    //         vertex(v.x, v.y, v.z)
-    //     }
-    //
-    //     vertex(0, 0, 0)
-    //     endShape(CLOSE)
+    beginShape(TRIANGLE_STRIP)
+    strokeWeight(2)
+    fill(0, 0, 30)
+
+
+    let i = quad_index % total
+    let pyramid = [globe[i][i], globe[i+1][i], globe[i+1][i+1], globe[i][i+1], globe[i][i]]
+    for (let v of pyramid) {
+        vertex(v.x, v.y, v.z)
+        vertex(0, 0, 0)
+    }
+    endShape()
+
+
+    beginShape()
+    fill(0, 0, 70)
+    // the quad at the surface
+    for (let v of pyramid) {
+        vertex(v.x, v.y, v.z)
+    }
+    endShape()
 
     displayHUD()
 }
@@ -196,4 +224,14 @@ function displayHUD() {
     fill(Z_HUE, Z_SAT, BRIGHT)
     text("z axis", PADDING, height-LETTER_HEIGHT)
     cam.endHUD()
+}
+
+function keyTyped() {
+    if (key === 'w') {
+        quad_index += 1
+        console.log(quad_index)
+    }
+    if (key === 's') {
+        quad_index -= 1
+    }
 }
