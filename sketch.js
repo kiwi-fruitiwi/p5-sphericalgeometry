@@ -18,7 +18,7 @@ TODO
  */
 let font
 let cam
-let total = 40
+let total = 12
 
 // define the hue and saturation for all 3 axes
 const X_HUE=0, X_SAT=80, Y_HUE=90, Y_SAT=80, Z_HUE=210, Z_SAT=80
@@ -123,7 +123,7 @@ function draw() {
 
         // if we go for a full 2π radians, we get the entire xy plane circle
         // this loop traverses quadrants 4, 3, 2, 1 in order on the xy plane
-        θ = map(i, 0, TOTAL, 0, PI)
+        θ = map(i, 0, TOTAL, 0, TAU)
         for (let j=0; j<TOTAL+1; j++) {
             /*
                 φ is the angle from z+, positive clockwise
@@ -133,7 +133,7 @@ function draw() {
                     z+ axis comes out of the page
              */
 
-            φ = map(j, 0, TOTAL, 0, TAU) // this loop makes meridians
+            φ = map(j, 0, TOTAL, 0, PI) // this loop makes meridians
             x = r*sin(φ)*cos(θ) // r*sin(φ) is a projection(?) on the x-y plane
             y = r*sin(φ)*sin(θ)
             z = r*cos(φ)
@@ -143,18 +143,38 @@ function draw() {
     }
 
     strokeWeight(1)
-    fill(0, 0, 75)
+    noFill()
     // display globe using points or shapes!!
-    beginShape(TRIANGLE_STRIP)
+    beginShape(QUAD_STRIP)
     for (let i=0; i<TOTAL; i++) {
-        for (let j=0; j<TOTAL+1; j++) {
+        for (let j=0; j<TOTAL; j++) {
             let v1 = globe[i][j]
             let v2 = globe[i+1][j]
+            let v3 = globe[i+1][j+1]
+            let v4 = globe[i][j+1]
+
+            stroke(0, 0, 60, 20)
+
+            // draw 4 points to close off a quadrilateral
             vertex(v1.x, v1.y, v1.z)
             vertex(v2.x, v2.y, v2.z)
+            vertex(v3.x, v3.y, v3.z)
+            vertex(v4.x, v4.y, v4.z)
         }
     }
     endShape()
+
+    // pyramid with lines https://editor.p5js.org/kchung/sketches/B17wokMUX
+    //     beginShape()
+    //     strokeWeight(1)
+    //     let i = 5
+    //     let pyramid = [globe[i][i], globe[i+1][i], globe[i+1][i+1], globe[i][i+1], globe[i][i]]
+    //     for (let v of pyramid) {
+    //         vertex(v.x, v.y, v.z)
+    //     }
+    //
+    //     vertex(0, 0, 0)
+    //     endShape(CLOSE)
 
     displayHUD()
 }
