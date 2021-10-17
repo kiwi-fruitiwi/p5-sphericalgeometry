@@ -12,13 +12,24 @@ coding plan
 .   draw axes to help visualize
     mouseX, mouseY constrain
 .   draw colored axes using beginHUD
+.   movable pyramid with WASD keys
+    .   wrap around the sphere when encountering a boundary
+    dynamically vary the sphere detail
 
+BUGS
+    when both θ and φ go from 0 to 2π, we actually draw the sphere twice
+        this is required if we want easy wrapping for WASD though
 
+TODO
+    make a second globe  with larger r and store coordinates in setup
+        toggle to make pyramid jump to second globe coordinates
+        try more globes at 0.01 radius increments around r from 50-150
+            later sine wave will be amp < 50!
 
  */
 let font
 let cam
-const TOTAL=16
+let TOTAL=16
 
 // define the hue and saturation for all 3 axes
 const X_HUE=0, X_SAT=80, Y_HUE=90, Y_SAT=80, Z_HUE=210, Z_SAT=80
@@ -56,6 +67,46 @@ function setup() {
     // TODO find out how to place slider properly
     // total = createSlider(1, 80, 20, 2)
 
+}
+
+
+let telescope = []
+let telescope_index = 1
+let quad_index = 1
+
+// these keep track of the top left corner of the quad projection to the
+// sphere's surface from the origin. unsure if projection is the correct word
+let projection_x = 0
+let projection_y = 0
+
+
+// TODO why does alpha not work in WEBGL 3D
+function draw() {
+    background(234, 34, 24)
+    stroke(0, 0, 60, 20)
+    strokeWeight(1)
+    lights()
+    drawBlenderAxes()
+
+    // TODO why doesn't this constrain work again?
+    // mouseX = constrain(mouseX, 0, width)
+    // mouseY = constrain(mouseY, 0, height)
+
+
+    /*
+        according to wikipedia, spherical coordinates are done as (r, θ, φ)
+        where θ is positive counterclockwise on the xy plane and φ is
+        positive clockwise on the zx plane.
+
+        this is not the case in p5.js :P
+            θ is clockwise on the xy plane
+            φ is clockwise on the zx/zy plane
+     */
+
+    globe = Array(TOTAL+1)
+    for (let i=0; i<TOTAL+1; i++) {
+        globe[i] = Array(TOTAL+1)
+    }
 
     /*
         we want to convert (r, lat, lon) ➜ (x, y, z) in 3D; this is
@@ -93,63 +144,15 @@ function setup() {
                     z+ axis comes out of the page
              */
 
-            φ = map(j, 0, TOTAL, 0, TAU) // this loop makes meridians
+            φ = map(j, 0, TOTAL, 0, PI) // this loop makes meridians
             // r*sin(φ) is a projection of r on the x-y plane
             x = r*sin(φ)*cos(θ)
             y = r*sin(φ)*sin(θ)
             z = r*cos(φ)
 
-            // I actually need 4 variables here to hold each vertex of the quad
-            // let tmp_r = r
-            // if (i === 1 && j === 1) {
-            //     for (let n=0; n<10; n++) {
-            //         tmp_r *= 1.1
-            //         telescope.push(new p5.Vector(
-            //             tmp_r*sin(φ)*cos(θ),
-            //             tmp_r*sin(φ)*sin(θ),
-            //             tmp_r*cos(φ)))
-            //     }
-            // }
-
             globe[i][j] = new p5.Vector(x, y, z)
         }
     }
-}
-
-
-let telescope = []
-let telescope_index = 1
-let quad_index = 1
-
-// these keep track of the top left corner of the quad projection to the
-// sphere's surface from the origin. unsure if projection is the correct word
-let projection_x = 0
-let projection_y = 0
-
-
-// TODO why does alpha not work in WEBGL 3D
-function draw() {
-    background(234, 34, 24)
-    stroke(0, 0, 60, 20)
-    strokeWeight(1)
-    lights()
-    drawBlenderAxes()
-
-    // TODO why doesn't this constrain work again?
-    // mouseX = constrain(mouseX, 0, width)
-    // mouseY = constrain(mouseY, 0, height)
-
-
-    /*
-        according to wikipedia, spherical coordinates are done as (r, θ, φ)
-        where θ is positive counterclockwise on the xy plane and φ is
-        positive clockwise on the zx plane.
-
-        this is not the case in p5.js :P
-            θ is clockwise on the xy plane
-            φ is clockwise on the zx/zy plane
-     */
-
 
     strokeWeight(0.1)
     noFill()
@@ -208,6 +211,12 @@ function draw() {
 
     displayHUD()
     checkKeysHeld()
+
+    if (frameCount % 36 === 0) {
+        projection_x = round(random(0, TOTAL-1))
+        projection_y = round(random(0, TOTAL-1))
+        console.log([projection_x, projection_y])
+    }
 }
 
 
@@ -286,30 +295,12 @@ function drawBlenderAxes() {
 
 function keyPressed() {
     // let projection_x and projection_y values wrap around
-    /*
-    if (key === 'w') {
-        projection_y -= 1
-        if (projection_y === -1)
-            projection_y = total - 1
+    if (key === 'c') {
+        TOTAL += 1
     }
 
-    if (key === 's') {
-        projection_y += 1
-        if (projection_y === total)
-            projection_y = 0
+    if (key === 'z') {
+        TOTAL -= 1
     }
-
-    if (key === 'a') {
-        projection_x += 1
-        if (projection_x === total)
-            projection_x = 0
-    }
-
-    if (key === 'd') {
-        projection_x -= 1
-        if (projection_x === -1)
-            projection_x = total - 1
-    }
-    */
 }
 
