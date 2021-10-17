@@ -18,7 +18,7 @@ coding plan
  */
 let font
 let cam
-let total = 24
+const TOTAL=16
 
 // define the hue and saturation for all 3 axes
 const X_HUE=0, X_SAT=80, Y_HUE=90, Y_SAT=80, Z_HUE=210, Z_SAT=80
@@ -26,14 +26,12 @@ const DIM = 40
 const BRIGHT = 75
 
 
-// quick function to create r x c arrays
-let array2D = (r,c) => [...Array(r)].map(x=>Array(c).fill(new p5.Vector()))
-// let globe = array2D(total+1, total+1)
+
 
 // initialize globe, our 2D array of 3D vectors
-let globe = Array(total+1)
-for (let i=0; i<total+1; i++) {
-    globe[i] = Array(total+1)
+let globe = Array(TOTAL+1)
+for (let i=0; i<TOTAL+1; i++) {
+    globe[i] = Array(TOTAL+1)
 }
 
 
@@ -42,9 +40,11 @@ document.oncontextmenu = function() {
     return false;
 }
 
+
 function preload() {
     font = loadFont('fonts/Meiryo-01.ttf')
 }
+
 
 function setup() {
     createCanvas(640, 360, WEBGL)
@@ -55,30 +55,7 @@ function setup() {
 
     // TODO find out how to place slider properly
     // total = createSlider(1, 80, 20, 2)
-}
 
-
-let telescope = []
-let telescope_index = 1
-let quad_index = 1
-
-// these keep track of the top left corner of the quad projection to the
-// sphere's surface from the origin. unsure if projection is the correct word
-let projection_x = 0
-let projection_y = 0
-
-
-// TODO why does alpha not work in WEBGL 3D
-function draw() {
-    background(234, 34, 24)
-    stroke(0, 0, 60, 20)
-    strokeWeight(1)
-    lights()
-    drawBlenderAxes()
-
-    // TODO why doesn't this constrain work again?
-    // mouseX = constrain(mouseX, 0, width)
-    // mouseY = constrain(mouseY, 0, height)
 
     /*
         we want to convert (r, lat, lon) ➜ (x, y, z) in 3D; this is
@@ -93,18 +70,6 @@ function draw() {
     */
     let θ, φ
     let x, y, z, r=100
-
-    const TOTAL = total
-
-    /*
-        according to wikipedia, spherical coordinates are done as (r, θ, φ)
-        where θ is positive counterclockwise on the xy plane and φ is
-        positive clockwise on the zx plane.
-
-        this is not the case in p5.js :P
-            θ is clockwise on the xy plane
-            φ is clockwise on the zx/zy plane
-     */
 
     // populate the globe 2D array
     // remember, angles start at 0 and are positive clockwise in p5!
@@ -149,13 +114,48 @@ function draw() {
             globe[i][j] = new p5.Vector(x, y, z)
         }
     }
+}
+
+
+let telescope = []
+let telescope_index = 1
+let quad_index = 1
+
+// these keep track of the top left corner of the quad projection to the
+// sphere's surface from the origin. unsure if projection is the correct word
+let projection_x = 0
+let projection_y = 0
+
+
+// TODO why does alpha not work in WEBGL 3D
+function draw() {
+    background(234, 34, 24)
+    stroke(0, 0, 60, 20)
+    strokeWeight(1)
+    lights()
+    drawBlenderAxes()
+
+    // TODO why doesn't this constrain work again?
+    // mouseX = constrain(mouseX, 0, width)
+    // mouseY = constrain(mouseY, 0, height)
+
+
+    /*
+        according to wikipedia, spherical coordinates are done as (r, θ, φ)
+        where θ is positive counterclockwise on the xy plane and φ is
+        positive clockwise on the zx plane.
+
+        this is not the case in p5.js :P
+            θ is clockwise on the xy plane
+            φ is clockwise on the zx/zy plane
+     */
 
 
     strokeWeight(0.1)
     noFill()
     // display globe using points or shapes!!
     beginShape()
-    for (let i=0; i<TOTAL; i++) {
+    for (let i=0; i<TOTAL; i++)
         for (let j=0; j<TOTAL; j++) {
             let v1 = globe[i][j]
             let v2 = globe[i+1][j]
@@ -170,7 +170,7 @@ function draw() {
             vertex(v3.x, v3.y, v3.z)
             vertex(v4.x, v4.y, v4.z)
         }
-    }
+
     endShape()
 
     // pyramid with lines https://editor.p5js.org/kchung/sketches/B17wokMUX
@@ -201,15 +201,13 @@ function draw() {
     // draw the quad at the surface
     beginShape()
     fill(0, 0, 100, 80)
-    for (let v of pyramid) {
+    for (let v of pyramid)
         vertex(v.x, v.y, v.z)
-    }
     endShape()
+
 
     displayHUD()
     checkKeysHeld()
-
-
 }
 
 
@@ -219,27 +217,28 @@ function checkKeysHeld() {
     if (keyIsDown(UP_ARROW) || keyIsDown(87)) { // w
         projection_y -= 1
         if (projection_y === -1)
-            projection_y = total - 1
+            projection_y = TOTAL - 1
     }
 
     if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) { // s
         projection_y += 1
-        if (projection_y === total)
+        if (projection_y === TOTAL)
             projection_y = 0
     }
 
     if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) { // a
         projection_x += 1
-        if (projection_x === total)
+        if (projection_x === TOTAL)
             projection_x = 0
     }
 
     if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) { // d
         projection_x -= 1
         if (projection_x === -1)
-            projection_x = total - 1
+            projection_x = TOTAL - 1
     }
 }
+
 
 function displayHUD() {
     cam.beginHUD(this._renderer, width, height)
