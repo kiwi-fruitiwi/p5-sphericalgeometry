@@ -30,7 +30,7 @@ TODO
  */
 let font
 let cam
-let SPHERE_DETAIL = 5 // number of segments per θ and φ
+let SPHERE_DETAIL = 24 // number of segments per θ and φ
 
 // define the hue and saturation for all 3 axes
 const X_HUE = 0, X_SAT = 80, Y_HUE = 90, Y_SAT = 80, Z_HUE = 210, Z_SAT = 80
@@ -41,10 +41,18 @@ const BRIGHT = 75
 let globe
 
 
+// a list of [a,b,c,d] containing 4 vertices of the base of a rect pyramid
+// used to telescope our selected pyramid out
+// let pyramid_telescope
+
+
 // these keep track of the top left corner of the quad projection to the
 // sphere's surface from the origin. unsure if projection is the correct word
-let projection_x = 0
-let projection_y = 0
+// let projection_x = (SPHERE_DETAIL / 2) >> 0 // integer division via bit shift
+let projection_x = (SPHERE_DETAIL / 4) >> 0
+let projection_y = (SPHERE_DETAIL / 4) >> 0
+
+let projection_scale_factor = 1
 
 
 // prevent the context menu from showing up :3 nya~
@@ -75,18 +83,19 @@ function draw() {
     drawBlenderAxes()
     populateGlobeArray()
     displayGlobe()
-    drawPyramid()
+    // drawPyramid(projection_scale_factor)
+    drawPyramid(0.1*cos(frameCount / 15)+1)
     displayHUD()
     checkKeysHeld()
 
     // randomly assign indices for our pyramid emanating from the origin
     // watch out! if you decrement the sphere detail in checkKeysHeld, there
     // might be a concurrency error leading to an arrayOutOfBounds type error
-    if (frameCount % (144/2) === 0) {
-        projection_x = round(random(0, SPHERE_DETAIL-1))
-        projection_y = round(random(0, SPHERE_DETAIL-1))
-        console.log([projection_x, projection_y])
-    }
+    // if (frameCount % (144/2) === 0) {
+    //     projection_x = round(random(0, SPHERE_DETAIL-1))
+    //     projection_y = round(random(0, SPHERE_DETAIL-1))
+    //     // console.log([projection_x, projection_y])
+    // }
 }
 
 
@@ -131,9 +140,7 @@ function populateGlobeArray() {
         /*
             θ is the polar angle along x-y plane. LHR thumb points to z+
             θ is clockwise positive and starts at 1,0
-         */
 
-        /*
             if we go for a full 2π radians, we get the entire xy plane circle
             this loop traverses quadrants 4, 3, 2, 1 in order on the xy plane
          */
@@ -177,12 +184,13 @@ function displayGlobe() {
             let v4 = globe[i][j+1]
 
             stroke(0, 0, 60, 20)
+            let psf = projection_scale_factor
 
             // draw 4 points to close off a quadrilateral
-            vertex(v1.x, v1.y, v1.z)
-            vertex(v2.x, v2.y, v2.z)
-            vertex(v3.x, v3.y, v3.z)
-            vertex(v4.x, v4.y, v4.z)
+            vertex(v1.x*psf, v1.y*psf, v1.z*psf)
+            vertex(v2.x*psf, v2.y*psf, v2.z*psf)
+            vertex(v3.x*psf, v3.y*psf, v3.z*psf)
+            vertex(v4.x*psf, v4.y*psf, v4.z*psf)
         }
 
     endShape(CLOSE)
@@ -190,7 +198,7 @@ function displayGlobe() {
 
 
 // draw our pyramid with rectangular base centered at the origin
-function drawPyramid() {
+function drawPyramid(scale_factor) {
     // this draws the rectangle pyramid
     // pyramid with lines https://editor.p5js.org/kchung/sketches/B17wokMUX
     beginShape(TRIANGLE_STRIP)
@@ -203,7 +211,7 @@ function drawPyramid() {
     let i = projection_x // this counts increments of θ
     let j = projection_y // this counts increments of φ
 
-    let pyramid = [
+    let pyramid = [         // these are all 3D p5.Vector objects
         globe[i][j],        // top left corner
         globe[i+1][j],      // top right corner
         globe[i+1][j+1],    // bottom right corner
@@ -211,7 +219,10 @@ function drawPyramid() {
         globe[i][j]]
 
     for (let v of pyramid) {
-        vertex(v.x, v.y, v.z)
+        vertex(
+            v.x * scale_factor,
+            v.y * scale_factor,
+            v.z * scale_factor)
         vertex(0, 0, 0)
     }
     endShape()
@@ -221,9 +232,11 @@ function drawPyramid() {
     beginShape()
     fill(0, 0, 100, 80)
     for (let v of pyramid)
-        vertex(v.x, v.y, v.z)
+        vertex(
+            v.x * scale_factor,
+            v.y * scale_factor,
+            v.z * scale_factor)
     endShape()
-
 }
 
 
@@ -253,6 +266,14 @@ function checkKeysHeld() {
         if (projection_x === -1)
             projection_x = SPHERE_DETAIL - 1
     }
+
+    // have Q and E shrink and grow the pyramid :o
+    if (keyIsDown(81))
+        projection_scale_factor += 0.1
+    if (keyIsDown(69))
+        projection_scale_factor -= 0.1
+
+
 }
 
 
