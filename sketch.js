@@ -15,6 +15,8 @@ coding plan
 .   movable pyramid with WASD keys
     .   wrap around the sphere when encountering a boundary
 .   dynamically vary the sphere detail
+.   adam sine wave based on distance
+        make this distance based on projection of avg point to the plane
 
 BUGS
     when both θ and φ go from 0 to 2π, we actually set up two sets of
@@ -22,10 +24,7 @@ BUGS
     wrapping for WASD though
 
 TODO
-    make a second globe with larger r and store coordinates in setup
-        toggle to make pyramid jump to second globe coordinates
-        try more globes at 0.01 radius increments around r from 50-150
-            later sine wave will be amp < 50!
+
 
  */
 let font
@@ -80,6 +79,12 @@ function setup() {
 function draw() {
     background(234, 34, 24)
     lights()
+
+    // for some reason, we have to constrain the mouse
+    // otherwise p5.js allows us to move our mouse off the canvas
+    // mouseX = constrain(mouseX, a.x, c.x)
+    mouseX = constrain(mouseX, 0, width)
+    mouseY = constrain(mouseY, 0, height)
 
     drawBlenderAxes()
     populateGlobeArray()
@@ -145,7 +150,7 @@ function populateGlobeArray() {
             if we go for a full 2π radians, we get the entire xy plane circle
             this loop traverses quadrants 4, 3, 2, 1 in order on the xy plane
          */
-        θ = map(i, 0, SPHERE_DETAIL, 0, TAU)
+        θ = map(i, 0, SPHERE_DETAIL, 0, PI)
         for (let j = 0; j < globe[i].length; j++) {
             /*
                 φ is the angle from z+, positive clockwise
@@ -173,7 +178,7 @@ function populateGlobeArray() {
 function displayGlobe() {
     strokeWeight(0.1)
     noFill()
-    stroke(0, 0, 60, 20)
+    stroke(0, 0, 60)
 
     // display globe using vertices
     let focus = new p5.Vector(100, 0, 0)
@@ -204,15 +209,23 @@ function displayGlobe() {
             strokeWeight(0.2)
             let distance = p5.Vector.dist(focus, avg)
             // let psf = 0.2 * cos(frameCount / 15) + 1
-            let psf = 0.1 * sin(distance/10 + angle) + 1
+            let psf = 0.1 * sin(distance + angle) + 1
 
 
-            fill(0, 0, 100, 20)
+            fill(180, 100, 100, 100)
+            // draw 4 points to close off a quadrilateral
+            beginShape(TRIANGLE_STRIP)
+            for (let v of vertices) {
+                vertex(v.x*psf, v.y*psf, v.z*psf)
+                vertex(0, 0, 0)
+            }
+            endShape()
+
+            fill(0, 0, 10, 100)
             // draw 4 points to close off a quadrilateral
             beginShape()
             for (let v of vertices) {
                 vertex(v.x*psf, v.y*psf, v.z*psf)
-                // vertex(0, 0, 0)
             }
             endShape()
 
@@ -328,7 +341,7 @@ function displayHUD() {
 // draw axes in blender colors, with negative parts less bright
 function drawBlenderAxes() {
     const ENDPOINT = 10000
-    strokeWeight(2)
+    strokeWeight(1)
 
     // red x axis
     stroke(X_HUE, X_SAT, DIM)
