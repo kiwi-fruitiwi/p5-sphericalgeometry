@@ -30,7 +30,7 @@ TODO
  */
 let font
 let cam
-let SPHERE_DETAIL = 24 // number of segments per θ and φ
+let SPHERE_DETAIL = 16 // number of segments per θ and φ
 
 // define the hue and saturation for all 3 axes
 const X_HUE = 0, X_SAT = 80, Y_HUE = 90, Y_SAT = 80, Z_HUE = 210, Z_SAT = 80
@@ -39,6 +39,7 @@ const BRIGHT = 75
 
 // an n by n 2D array of points on a sphere in (r, θ, φ) triples
 let globe
+let angle = 0
 
 
 // a list of [a,b,c,d] containing 4 vertices of the base of a rect pyramid
@@ -84,7 +85,7 @@ function draw() {
     populateGlobeArray()
     displayGlobe()
     // drawPyramid(projection_scale_factor)
-    drawPyramid(0.1*cos(frameCount / 15)+1)
+    // drawPyramid(0.1*cos(frameCount / 15)+1)
     displayHUD()
     checkKeysHeld()
 
@@ -175,25 +176,52 @@ function displayGlobe() {
     stroke(0, 0, 60, 20)
 
     // display globe using vertices
-    beginShape()
+    let focus = new p5.Vector(100, 0, 0)
+    let origin = new p5.Vector(0, 0, 0)
+
+    strokeWeight(5)
+    point(100, 0, 0)
+
     for (let i = 0; i < globe.length-1; i++)
         for (let j = 0; j < globe[i].length-1; j++) {
-            let v1 = globe[i][j]
-            let v2 = globe[i+1][j]
-            let v3 = globe[i+1][j+1]
-            let v4 = globe[i][j+1]
 
-            stroke(0, 0, 60, 20)
-            let psf = projection_scale_factor
+            let vertices = []
+            vertices.push(globe[i][j])
+            vertices.push(globe[i+1][j])
+            vertices.push(globe[i+1][j+1])
+            vertices.push(globe[i][j+1])
 
+            // average vector of the 4 quad corners :D
+
+            let avg = new p5.Vector()
+            for (let v of vertices) {
+                avg.add(v)
+            }
+            avg.div(vertices.length)
+            avg = vertices[0]
+
+            stroke(0, 0, 60)
+            strokeWeight(0.2)
+            let distance = p5.Vector.dist(focus, avg)
+            // let psf = 0.2 * cos(frameCount / 15) + 1
+            let psf = 0.1 * sin(distance/10 + angle) + 1
+
+
+            fill(0, 0, 100, 20)
             // draw 4 points to close off a quadrilateral
-            vertex(v1.x*psf, v1.y*psf, v1.z*psf)
-            vertex(v2.x*psf, v2.y*psf, v2.z*psf)
-            vertex(v3.x*psf, v3.y*psf, v3.z*psf)
-            vertex(v4.x*psf, v4.y*psf, v4.z*psf)
-        }
+            beginShape()
+            for (let v of vertices) {
+                vertex(v.x*psf, v.y*psf, v.z*psf)
+                // vertex(0, 0, 0)
+            }
+            endShape()
 
-    endShape(CLOSE)
+            // fill in the missing line between vertex 1 and 4
+            let v1 = vertices[0]
+            let v4 = vertices[3]
+            line(v1.x*psf, v1.y*psf, v1.z*psf, v4.x*psf, v4.y*psf, v4.z*psf)
+        }
+    angle += 0.03
 }
 
 
@@ -300,6 +328,7 @@ function displayHUD() {
 // draw axes in blender colors, with negative parts less bright
 function drawBlenderAxes() {
     const ENDPOINT = 10000
+    strokeWeight(2)
 
     // red x axis
     stroke(X_HUE, X_SAT, DIM)
@@ -318,6 +347,8 @@ function drawBlenderAxes() {
     line(0, 0, -ENDPOINT, 0, 0, 0)
     stroke(Z_HUE, Z_SAT, BRIGHT)
     line(0, 0, 0, 0, 0, ENDPOINT)
+
+    strokeWeight(15)
 }
 
 
