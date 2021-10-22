@@ -17,6 +17,10 @@ coding plan
 .   dynamically vary the sphere detail
 .   adam sine wave based on distance
         make this distance based on projection of avg point to the plane
+.   draw circle for background color
+.   don't draw extra pyramids for points on sphere that don't move
+    have quads do some seeking of noise instead of strictly following sine wave
+        this might get rid of the concentric circles
 
 BUGS
     when both θ and φ go from 0 to 2π, we actually set up two sets of
@@ -29,7 +33,7 @@ TODO
  */
 let font
 let cam
-let SPHERE_DETAIL = 16 // number of segments per θ and φ
+let SPHERE_DETAIL = 24 // number of segments per θ and φ
 
 // define the hue and saturation for all 3 axes
 const X_HUE = 0, X_SAT = 80, Y_HUE = 90, Y_SAT = 80, Z_HUE = 210, Z_SAT = 80
@@ -45,7 +49,7 @@ let angle = 0
 // used to telescope our selected pyramid out
 // let pyramid_telescope
 
-
+/*
 // these keep track of the top left corner of the quad projection to the
 // sphere's surface from the origin. unsure if projection is the correct word
 // let projection_x = (SPHERE_DETAIL / 2) >> 0 // integer division via bit shift
@@ -53,7 +57,7 @@ let projection_x = (SPHERE_DETAIL / 4) >> 0
 let projection_y = (SPHERE_DETAIL / 4) >> 0
 
 let projection_scale_factor = 1
-
+*/
 
 // prevent the context menu from showing up :3 nya~
 document.oncontextmenu = function() {
@@ -71,28 +75,48 @@ function setup() {
     colorMode(HSB, 360, 100, 100, 100)
     textFont(font, 16)
 
-    cam = new Dw.EasyCam(this._renderer, {distance:240});
+    cam = new Dw.EasyCam(this._renderer,
+        {
+            distance:240
+        });
 }
 
+let light_x, light_y
 
 // TODO why does alpha not work in WEBGL 3D
 function draw() {
     background(234, 34, 24)
-    lights()
+    // lights()
+    /* Sets the default ambient and directional light. Defaults are ambientLight
+        (128, 128, 128) and directionalLight(128, 128, 128, 0, 0, -1)
+     */
 
-    // for some reason, we have to constrain the mouse
-    // otherwise p5.js allows us to move our mouse off the canvas
-    // mouseX = constrain(mouseX, a.x, c.x)
-    mouseX = constrain(mouseX, 0, width)
-    mouseY = constrain(mouseY, 0, height)
+    // mouse distance from the center, simulating camera position?
+    light_x = mouseX - height / 2;
+    light_y = mouseY - width / 2;
+
+    ambientLight(200);
+    directionalLight(0, 0, 10, 0, 1, 0);
+    // pointLight(0, 0, 100, -75, 75, 75);
+
+    stroke(0, 0, 100)
+    point(100, 100, 100)
+    point(100, 0, 0)
+    point(0, 100, 0)
+    point(0, 0, 100)
+
+    push()
+    translate(-200, 200, 200)
+    sphere(25)
+    pop()
 
     drawBlenderAxes()
     populateGlobeArray()
     displayGlobe()
     // drawPyramid(projection_scale_factor)
     // drawPyramid(0.1*cos(frameCount / 15)+1)
-    displayHUD()
-    checkKeysHeld()
+    // displayHUD()
+    checkKeysHeld() // TODO I should move the camera with rotate WASD
 
     // randomly assign indices for our pyramid emanating from the origin
     // watch out! if you decrement the sphere detail in checkKeysHeld, there
@@ -102,6 +126,10 @@ function draw() {
     //     projection_y = round(random(0, SPHERE_DETAIL-1))
     //     // console.log([projection_x, projection_y])
     // }
+
+
+    ambientLight(0, 0, 100)
+    directionalLight(0, 0, 100, 0, 0, -1)
 }
 
 
@@ -181,11 +209,23 @@ function displayGlobe() {
     stroke(0, 0, 60)
 
     // display globe using vertices
-    let focus = new p5.Vector(100, 0, 0)
+    let focus = new p5.Vector(0, 100, 0)
     let origin = new p5.Vector(0, 0, 0)
 
+    // draw a circle for background color
+    fill(181, 96, 96, 96)
+    push()
+    rotateX(PI/2)
+    circle(0, 0, 100*2)
+    pop()
+
     strokeWeight(5)
-    point(100, 0, 0)
+
+    /* flips ADAM to face the default camera, but needs rotateZ(π/2) above */
+    // rotateZ(PI/2)
+    // rotateX(PI/2)
+    // lights()
+
 
     for (let i = 0; i < globe.length-1; i++)
         for (let j = 0; j < globe[i].length-1; j++) {
@@ -196,43 +236,63 @@ function displayGlobe() {
             vertices.push(globe[i+1][j+1])
             vertices.push(globe[i][j+1])
 
-            // average vector of the 4 quad corners :D
-
+            // average vector of the 4 quad corners :D should be their center
             let avg = new p5.Vector()
             for (let v of vertices) {
                 avg.add(v)
             }
             avg.div(vertices.length)
-            avg = vertices[0]
 
-            stroke(0, 0, 60)
-            strokeWeight(0.2)
-            let distance = p5.Vector.dist(focus, avg)
-            // let psf = 0.2 * cos(frameCount / 15) + 1
-            let psf = 0.1 * sin(distance + angle) + 1
+            // slightly offset the x,z coordinates so the center 4 squares
+            // don't oscillate at the exact same frequency
+            avg.x += 3
+            avg.z += 5
 
+            // distance from the y axis
+            let distance = sqrt(avg.z**2 + avg.x**2)
 
-            fill(180, 100, 100, 100)
-            // draw 4 points to close off a quadrilateral
-            beginShape(TRIANGLE_STRIP)
-            for (let v of vertices) {
-                vertex(v.x*psf, v.y*psf, v.z*psf)
-                vertex(0, 0, 0)
+            noStroke()
+
+            // TODO map to bigger amplitude near center
+            let amp = map(distance, 0, 100, -0.05, 0.01)
+
+            // we want our quad surfaces to be oscillating close to the surface
+            let psf = amp * abs(sin(distance * 10 + angle)) + 1
+
+            /*  sin(distance / 10) makes obvious concentric circles but * n
+                makes it appear more random
+             */
+
+            const RADIUS = 64
+            // only render pyramids within a certain radius
+            if (distance < RADIUS) {
+                fill(181, 96, 96, 96)
+                // draw 4 points to close off a quadrilateral
+                beginShape(TRIANGLE_STRIP)
+                for (let v of vertices) {
+                    vertex(v.x*psf, v.y*psf, v.z*psf)
+                    vertex(0, 0, 0)
+                }
+                endShape()
+            } else {
+                // don't render oscillations if we're outside of the radius
+                psf = 1
             }
-            endShape()
 
-            fill(0, 0, 10, 100)
+            // fill(223, 34, 24, 100)
+            specularMaterial(223, 34, 24)
+            shininess(100) // ? doesn't seem to work. maybe specularMaterial
             // draw 4 points to close off a quadrilateral
             beginShape()
-            for (let v of vertices) {
-                vertex(v.x*psf, v.y*psf, v.z*psf)
-            }
+            for (let v of vertices)
+                vertex(v.x * psf, v.y * psf, v.z * psf)
             endShape()
 
             // fill in the missing line between vertex 1 and 4
-            let v1 = vertices[0]
-            let v4 = vertices[3]
-            line(v1.x*psf, v1.y*psf, v1.z*psf, v4.x*psf, v4.y*psf, v4.z*psf)
+            // let v1 = vertices[0]
+            // let v4 = vertices[3]
+            // line(v1.x * psf, v1.y * psf, v1.z * psf,
+            //     v4.x * psf, v4.y * psf, v4.z * psf)
         }
     angle += 0.03
 }
