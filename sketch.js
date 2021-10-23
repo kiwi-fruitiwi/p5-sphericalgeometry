@@ -10,7 +10,7 @@ coding plan
 .   disable context menu
 .   add total slider
 .   draw axes to help visualize
-    mouseX, mouseY constrain
+    mouseX, mouseY constrain; not possible with easycam I think
 .   draw colored axes using beginHUD
 .   movable pyramid with WASD keys
     .   wrap around the sphere when encountering a boundary
@@ -19,8 +19,8 @@ coding plan
         make this distance based on projection of avg point to the plane
 .   draw circle for background color
 .   don't draw extra pyramids for points on sphere that don't move
-    have quads do some seeking of noise instead of strictly following sine wave
-        this might get rid of the concentric circles
+.   have quads do some seeking of noise instead of strictly following sine wave
+.       this might get rid of the concentric circles
 
 BUGS
     when both θ and φ go from 0 to 2π, we actually set up two sets of
@@ -32,32 +32,20 @@ TODO
 
  */
 let font
-let cam
+let cam // easycam!
 let SPHERE_DETAIL = 24 // number of segments per θ and φ
 
 // define the hue and saturation for all 3 axes
 const X_HUE = 0, X_SAT = 80, Y_HUE = 90, Y_SAT = 80, Z_HUE = 210, Z_SAT = 80
-const DIM = 40
-const BRIGHT = 75
+const DIM = 40 // brightness value for the dimmer negative axis
+const BRIGHT = 75 // brightness value for the brighter positive axis
 
-// an n by n 2D array of points on a sphere in (r, θ, φ) triples
-let globe
-let angle = 0
+let globe // an n by n 2D array of points on a sphere in (r, θ, φ) triples
+let angle = 0 // we use this as a phase variable to vary our sine waves
 
+// read the amplitude of our voice from the mic
+let voice
 
-// a list of [a,b,c,d] containing 4 vertices of the base of a rect pyramid
-// used to telescope our selected pyramid out
-// let pyramid_telescope
-
-/*
-// these keep track of the top left corner of the quad projection to the
-// sphere's surface from the origin. unsure if projection is the correct word
-// let projection_x = (SPHERE_DETAIL / 2) >> 0 // integer division via bit shift
-let projection_x = (SPHERE_DETAIL / 4) >> 0
-let projection_y = (SPHERE_DETAIL / 4) >> 0
-
-let projection_scale_factor = 1
-*/
 
 // prevent the context menu from showing up :3 nya~
 document.oncontextmenu = function() {
@@ -70,6 +58,23 @@ function preload() {
 }
 
 
+/* Fixes: sound being blocked https://talonendm.github.io/2020-11-16-JStips/
+   Errors messages (CTRL SHIFT i) Chrome Developer Tools:
+   The AudioContext was not allowed to start. It must be resumed (or
+   created)  after a user gesture on the page. https://goo.gl/7K7WLu
+
+   Possibly unrelated: maybe we need to add sound.js.map too.
+   DevTools failed to load SourceMap: Could not load content for
+   https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/addons/p5.sound.min.js.map
+   : HTTP error: status code 404, net::ERR_HTTP_RESPONSE_CODE_FAILURE
+ */
+function touchStarted() {
+    if (getAudioContext().state !== 'running') {
+        getAudioContext().resume().then(r => {});
+    }
+}
+
+
 function setup() {
     createCanvas(640, 360, WEBGL)
     colorMode(HSB, 360, 100, 100, 100)
@@ -79,57 +84,60 @@ function setup() {
         {
             distance:240
         });
+
+    voice = new p5.AudioIn()
+    voice.start()
 }
 
-let light_x, light_y
 
 // TODO why does alpha not work in WEBGL 3D
 function draw() {
     background(234, 34, 24)
-    // lights()
-    /* Sets the default ambient and directional light. Defaults are ambientLight
-        (128, 128, 128) and directionalLight(128, 128, 128, 0, 0, -1)
-     */
-
-    // mouse distance from the center, simulating camera position?
-    light_x = mouseX - height / 2;
-    light_y = mouseY - width / 2;
 
     ambientLight(200);
-    directionalLight(0, 0, 10, 0, 1, 0);
-    // pointLight(0, 0, 100, -75, 75, 75);
+    directionalLight(0, 0, 10, .5, 1, 0); // z axis seems inverted
+
+    // drawQuadrantOneBoundingBox()
+    drawBlenderAxes()
+    populateGlobeArray()
+    displayGlobe()
+    // displayHUD()
+}
+
+
+function drawQuadrantOneBoundingBox() {
+    push()
+    translate(-100, 100, 100)
+    sphere(25)
+    pop()
 
     stroke(0, 0, 100)
+    strokeWeight(1)
     point(100, 100, 100)
     point(100, 0, 0)
     point(0, 100, 0)
     point(0, 0, 100)
 
-    push()
-    translate(-200, 200, 200)
-    sphere(25)
-    pop()
 
-    drawBlenderAxes()
-    populateGlobeArray()
-    displayGlobe()
-    // drawPyramid(projection_scale_factor)
-    // drawPyramid(0.1*cos(frameCount / 15)+1)
-    // displayHUD()
-    checkKeysHeld() // TODO I should move the camera with rotate WASD
+    // line(100, 0, 0, 100, 100, 100)
+    // line(0, 100, 0, 100, 100, 100)
+    // line(0, 0, 100, 100, 100, 100)
 
-    // randomly assign indices for our pyramid emanating from the origin
-    // watch out! if you decrement the sphere detail in checkKeysHeld, there
-    // might be a concurrency error leading to an arrayOutOfBounds type error
-    // if (frameCount % (144/2) === 0) {
-    //     projection_x = round(random(0, SPHERE_DETAIL-1))
-    //     projection_y = round(random(0, SPHERE_DETAIL-1))
-    //     // console.log([projection_x, projection_y])
-    // }
+    strokeWeight(0.1)
+    stroke(0, 0, 100)
+    line(100, 100, 0, 100, 100, 100)
+    line(100, 0, 100, 100, 100, 100)
+    line(0, 100, 100, 100, 100, 100)
+
+    line(100, 100, 0, 100, 0, 0)
+    line(100, 100, 0, 0, 100, 0)
+    line(0, 100, 0, 0, 100, 100)
+    line(0, 0, 100, 0, 100, 100)
 
 
-    ambientLight(0, 0, 100)
-    directionalLight(0, 0, 100, 0, 0, -1)
+    line(0, 100, 0, 0, 100, 100)
+    line(0, 0, 100, 100, 0, 100)
+    line(100, 0, 0, 100, 0, 100)
 }
 
 
@@ -203,6 +211,11 @@ function populateGlobeArray() {
 }
 
 
+
+
+
+let lastAmp=0, voiceAmp, currentAmp
+
 function displayGlobe() {
     strokeWeight(0.1)
     noFill()
@@ -217,6 +230,8 @@ function displayGlobe() {
     push()
     rotateX(PI/2)
     circle(0, 0, 100*2)
+
+    // image(backgroundImage, -width/2, -height/2, width, height)
     pop()
 
     strokeWeight(5)
@@ -245,8 +260,8 @@ function displayGlobe() {
 
             // slightly offset the x,z coordinates so the center 4 squares
             // don't oscillate at the exact same frequency
-            avg.x += 3
-            avg.z += 5
+            avg.x += 0.5
+            avg.z += 0.5
 
             // distance from the y axis
             let distance = sqrt(avg.z**2 + avg.x**2)
@@ -254,19 +269,59 @@ function displayGlobe() {
             noStroke()
 
             // TODO map to bigger amplitude near center
-            let amp = map(distance, 0, 100, -0.05, 0.01)
+            let amp = 0.2*map(distance, 0, 100, -1, 1)
+
+            // our oscillation amplitude varies from -0.05 to 0.01; we
+            // should add a large negative amp to our voice
+
+            /*
+                we want some sort of smoothing here to average out with the
+                last n values so there are less jumps. maybe an array of 30.
+
+                we want to modify the amplitude with two sine waves: one
+                that performs small oscillations and another that gives
+                large negative scaling values closer to the center based on
+                voice amplitude.
+             */
+            const RADIUS = 66 // only render pyramids within a certain radius
+
+            currentAmp = voice.getLevel()
+            voiceAmp = (currentAmp + lastAmp) / 2
+            lastAmp = voiceAmp
+
+            // we want the voice amp to have the greatest effect in the center
+            // this function is designed to be positive in its domain, since
+            // cos(RADIUS/4), the quarter period, will give zero
+            // voiceAmp = map(voice.getLevel(), 0, 0.5, 0, 1) /
+            //     tan(TAU / (RADIUS * 4) * distance)
+
+            voiceAmp = 50*map(voice.getLevel(), 0, 0.25, 0, 1) / (distance**(1.9))
+
+            // TODO find out about switch:case in js, fix sine wave.
+            // TODO try offset distance sine wave for each pyramid
+
+            // amp += (1-voiceAmp)
 
             // we want our quad surfaces to be oscillating close to the surface
-            let psf = amp * abs(sin(distance * 10 + angle)) + 1
+            let psf = amp * abs(sin(distance / 20 + angle)) + (1.025-voiceAmp)
+
+
+
+            // remember, psf is a scaling factor that should hover from 0 to 1
+            // let psf = amp
 
             /*  sin(distance / 10) makes obvious concentric circles but * n
                 makes it appear more random
              */
 
-            const RADIUS = 64
             // only render pyramids within a certain radius
+
+            let fromColor = color(185, 12, 98)
+            let toColor = color(184, 57, 95)
+            let c = lerpColor(fromColor, toColor, distance/RADIUS)
             if (distance < RADIUS) {
-                fill(181, 96, 96, 96)
+                fill(c)
+
                 // draw 4 points to close off a quadrilateral
                 beginShape(TRIANGLE_STRIP)
                 for (let v of vertices) {
@@ -280,6 +335,7 @@ function displayGlobe() {
             }
 
             // fill(223, 34, 24, 100)
+            // see https://p5js.org/examples/3d-materials.html
             specularMaterial(223, 34, 24)
             shininess(100) // ? doesn't seem to work. maybe specularMaterial
             // draw 4 points to close off a quadrilateral
@@ -294,7 +350,7 @@ function displayGlobe() {
             // line(v1.x * psf, v1.y * psf, v1.z * psf,
             //     v4.x * psf, v4.y * psf, v4.z * psf)
         }
-    angle += 0.03
+    angle -= 0.03
 }
 
 
