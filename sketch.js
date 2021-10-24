@@ -46,7 +46,8 @@ let angle = 0 // we use this as a phase variable to vary our sine waves
 
 // read the amplitude of our voice from the mic
 let voice
-
+let sound
+let p5amp
 
 // prevent the context menu from showing up :3 nya~
 document.oncontextmenu = function() {
@@ -55,7 +56,8 @@ document.oncontextmenu = function() {
 
 
 function preload() {
-    font = loadFont('fonts/Meiryo-01.ttf')
+    font = loadFont('data/Meiryo-01.ttf')
+    voice = loadSound('data/adam.mp3')
 }
 
 
@@ -84,8 +86,10 @@ function setup() {
     cam = new Dw.EasyCam(this._renderer, {distance:240});
     cam.rotateX(-PI/2)
 
-    voice = new p5.AudioIn()
-    voice.start()
+    // voice = new p5.AudioIn()
+    // voice.start()
+    p5amp = new p5.Amplitude()
+    voice.play()
 }
 
 
@@ -262,7 +266,8 @@ function displayGlobe() {
                 TODO average out the last 10 values, maybe. use array pop0
              */
 
-            currentVoiceAmp = (voice.getLevel() + lastVoiceAmp) / 2
+            // currentVoiceAmp = (voice.getLevel() + lastVoiceAmp) / 2
+            currentVoiceAmp = (p5amp.getLevel() + lastVoiceAmp) / 2
             lastVoiceAmp = currentVoiceAmp
 
             /*  we want the voice amp to have the greatest effect in the center
