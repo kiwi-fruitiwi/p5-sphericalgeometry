@@ -82,6 +82,7 @@ function setup() {
     textFont(font, 16)
 
     cam = new Dw.EasyCam(this._renderer, {distance:240});
+    cam.rotateX(-PI/2)
 
     voice = new p5.AudioIn()
     voice.start()
@@ -124,7 +125,7 @@ function displayTorus() {
     specularMaterial(227, 33, 27)
     let m = 10
     shininess(100)
-    torus(100+m /*radius*/, m /*tube radius*/, 50 /*detail*/)
+    torus(100+m /*radius*/, m /*tube radius*/, 50 /*detailX*/, 20 /*detailY*/)
     pop()
 
 }
@@ -217,6 +218,10 @@ function displayGlobe() {
     push()
     rotateX(PI/2)
     circle(0, 0, 100*2)
+    translate(0, 0, 1)
+
+    ambientMaterial(223, 34, 24)
+    circle(0, 0, 101*2)
     pop()
 
     /* iterate through our 2D array of globe vertices and make square shells!
