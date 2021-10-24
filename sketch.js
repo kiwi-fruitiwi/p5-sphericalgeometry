@@ -89,15 +89,44 @@ function setup() {
 
 
 function draw() {
-    background(234, 34, 24)
-
+    // background(234, 34, 24)
+    background(223, 29, 35)
     ambientLight(200);
     directionalLight(0, 0, 10, .5, 1, 0); // z axis seems inverted
 
-    drawBlenderAxes()
+    // drawBlenderAxes()
     populateGlobeArray()
     displayGlobe()
     // displayHUD()
+
+    // adds some detail around ADAM
+    displayTorus()
+}
+
+
+
+function displayTorus() {
+    noStroke()
+
+    // white ring
+    push()
+    rotateX(PI/2)
+    translate(0, 0, -5)
+    specularMaterial(220, 1, 100)
+    let x = 2
+    shininess(100)
+    torus(100+x /*radius*/, x /*tube radius*/, 50 /*detail*/)
+    pop()
+
+    // surrounding base torus
+    push()
+    rotateX(PI/2)
+    specularMaterial(227, 33, 27)
+    let m = 10
+    shininess(100)
+    torus(100+m /*radius*/, m /*tube radius*/, 50 /*detail*/)
+    pop()
+
 }
 
 
@@ -178,9 +207,10 @@ let lastVoiceAmp=0, currentVoiceAmp
 
 function displayGlobe() {
 
-    // draw a circle for background color; this circle eliminates the need
-    // for all the faces of square pyramids to be drawn, because it will
-    // provide the color needed to fill in the sphere's inside.
+    /*  draw a circle for background color; this circle eliminates the need
+        for all the faces of square pyramids to be drawn, because it will
+        provide the color needed to fill in the sphere's inside.
+    */
     fill(181, 96, 96, 96)
     noStroke()
 
