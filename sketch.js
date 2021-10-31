@@ -28,6 +28,8 @@ BUGS
     wrapping for WASD though
 
 TODO
+    we don't need to vary the sphere detail on demand. optimization is possible
+
 
 
  */
@@ -46,7 +48,6 @@ let angle = 0 // we use this as a phase variable to vary our sine waves
 
 // read the amplitude of our voice from the mic
 let voice
-let sound
 let p5amp
 
 // prevent the context menu from showing up :3 nya~
@@ -86,6 +87,7 @@ function setup() {
     cam = new Dw.EasyCam(this._renderer, {distance:240});
     cam.rotateX(-PI/2)
 
+    // this enables microphone input
     // voice = new p5.AudioIn()
     // voice.start()
     p5amp = new p5.Amplitude()
@@ -96,7 +98,7 @@ function setup() {
 function draw() {
     // background(234, 34, 24)
     background(223, 29, 35)
-    ambientLight(200);
+    ambientLight(250);
     directionalLight(0, 0, 10, .5, 1, 0); // z axis seems inverted
 
     // drawBlenderAxes()
@@ -109,7 +111,9 @@ function draw() {
 }
 
 
-
+/*  draw the ring of metal around ADAM as well as the ring of white light
+    between
+ */
 function displayTorus() {
     noStroke()
 
@@ -120,7 +124,11 @@ function displayTorus() {
     specularMaterial(220, 1, 100)
     let x = 2
     shininess(100)
-    torus(100+x /*radius*/, x /*tube radius*/, 50 /*detail*/)
+    torus(
+        100+x,      // radius
+        x,          // tube radius
+        50          // detail
+    )
     pop()
 
     // surrounding base torus
@@ -129,9 +137,13 @@ function displayTorus() {
     specularMaterial(227, 33, 27)
     let m = 10
     shininess(100)
-    torus(100+m /*radius*/, m /*tube radius*/, 50 /*detailX*/, 20 /*detailY*/)
+    torus(
+        100+m,      // radius
+        m,          // tube radius
+        50,         // detailX
+        20          // detailY
+    )
     pop()
-
 }
 
 
