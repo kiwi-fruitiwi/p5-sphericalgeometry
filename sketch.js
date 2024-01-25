@@ -90,7 +90,7 @@ function setup() {
     // this enables microphone input
     // voice = new p5.AudioIn()
     // voice.start()
-    p5amp = new p5.Amplitude()
+    p5amp = new p5.Amplitude(0)
     voice.play()
 }
 
